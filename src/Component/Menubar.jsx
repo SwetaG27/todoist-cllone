@@ -216,7 +216,7 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
       },
     ];
 
-    if (favorites.length > 0) {
+    
       items.push({
         key: "favorites",
         label: "Favorites",
@@ -248,7 +248,7 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
           ),
         })),
       });
-    }
+  
 
     items.push({
       key: "projects",

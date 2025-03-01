@@ -1,374 +1,200 @@
-const API_URL = "https://api.todoist.com/rest/v2";
-const API_TOKEN = "7f3cf404190b1f9b99c7b4f18057a17074565026";
+import axios from "axios";
 
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error("API Error:", {
-      status: response.status,
-      statusText: response.statusText,
-      data: errorData,
-    });
-    throw new Error(errorData.message || `API error: ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return true;
-  }
-
-  return response.json();
-};
-
-const getHeaders = () => ({
-  Authorization: `Bearer ${API_TOKEN}`,
-  "Content-Type": "application/json",
+const todoAPI = axios.create({
+  baseURL: "https://api.todoist.com/rest/v2",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: "Bearer 7f3cf404190b1f9b99c7b4f18057a17074565026",
+  },
 });
 
-export const fetchProjects = async () => {
+export const getProjects = async () => {
   try {
-    const response = await fetch(`${API_URL}/projects`, {
-      method: "GET",
-      headers: getHeaders(),
-    });
-
-    return handleResponse(response);
+    const response = await todoAPI.get("/projects");
+    return response.data;
   } catch (error) {
     console.error("Error fetching projects:", error);
     throw error;
   }
 };
 
-export const fetchTasks = async (projectId) => {
+export const fetchProjects = getProjects;
+
+export const createProject = async (name, color = "berry_red") => {
   try {
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: "GET",
-      headers: getHeaders(),
+    const response = await todoAPI.post("/projects", { name, color });
+    return response.data;
+  } catch (error) {
+    console.error("Error creating project:", error);
+    throw error;
+  }
+};
+
+export const updateProject = async (id, data) => {
+  try {
+    const response = await todoAPI.post(`/projects/${id}`, data);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating project:", error);
+    throw error;
+  }
+};
+
+export const deleteProject = async (id) => {
+  try {
+    await todoAPI.delete(`/projects/${id}`);
+    return true;
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    throw error;
+  }
+};
+
+export const toggleFavorite = async (projectId, isFavorite) => {
+  try {
+    const response = await todoAPI.post(`/projects/${projectId}`, {
+      is_favorite: isFavorite,
     });
+    return response.data;
+  } catch (error) {
+    console.error("Error toggling favorite status:", error);
+    throw error;
+  }
+};
 
-    const allTasks = await handleResponse(response);
-
-    let filteredTasks;
+export const fetchTasks = async (projectId = null) => {
+  try {
+    const response = await todoAPI.get("/tasks");
+    const allTasks = response.data;
 
     if (projectId === null) {
-      const projectsResponse = await fetch(`${API_URL}/projects`, {
-        method: "GET",
-        headers: getHeaders(),
-      });
-
-      const projects = await handleResponse(projectsResponse);
-      const inboxProject = projects.find(
-        (p) => p.name.toLowerCase() === "inbox" || p.is_inbox_project
-      );
+      const projectsResponse = await todoAPI.get("/projects");
+      const projects = projectsResponse.data;
+      const inboxProject = projects.find((p) => p.is_inbox_project === true);
 
       if (inboxProject) {
-        filteredTasks = allTasks.filter(
-          (task) => task.project_id === inboxProject.id.toString()
-        );
+        return allTasks.filter((task) => task.project_id === inboxProject.id);
       } else {
-        filteredTasks = allTasks.filter((task) => !task.project_id);
+        return allTasks.filter((task) => {
+          if (!task.project_id) return true;
+
+          const taskProject = projects.find((p) => p.id === task.project_id);
+          return taskProject && taskProject.name.toLowerCase() === "inbox";
+        });
       }
     } else {
-      filteredTasks = allTasks.filter(
+      return allTasks.filter(
         (task) =>
           task.project_id && task.project_id.toString() === projectId.toString()
       );
     }
-
-    return filteredTasks;
   } catch (error) {
     console.error("Error fetching tasks:", error);
     throw error;
   }
 };
 
-export const createProject = async (name) => {
-  try {
-    const response = await fetch(`${API_URL}/projects`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ name }),
-    });
-
-    return handleResponse(response);
-  } catch (error) {
-    console.error("Error creating project:", error);
-    return null;
-  }
-};
-
-export const updateProject = async (id, updates) => {
-  try {
-    const response = await fetch(`${API_URL}/projects/${id}`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(updates),
-    });
-
-    return handleResponse(response);
-  } catch (error) {
-    console.error("Error updating project:", error);
-    return null;
-  }
-};
-
-export const deleteProject = async (id) => {
-  try {
-    const response = await fetch(`${API_URL}/projects/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error("Error deleting project:", error);
-    return false;
-  }
-};
-
 export const createTask = async (projectId, content, description = "") => {
   try {
-    const data = { content, description };
-    if (projectId !== null) {
-      data.project_id = projectId;
+    const taskData = { content, description };
+
+    if (projectId) {
+      taskData.project_id = projectId;
     }
 
-    const response = await fetch(`${API_URL}/tasks`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    });
-
-    return handleResponse(response);
+    const response = await todoAPI.post("/tasks", taskData);
+    return response.data;
   } catch (error) {
     console.error("Error creating task:", error);
-    return null;
+    throw error;
   }
 };
 
-export const updateTask = async (id, updates) => {
+export const updateTask = async (taskId, updates) => {
   try {
-    const currentTaskResponse = await fetch(`${API_URL}/tasks/${id}`, {
-      method: "GET",
-      headers: getHeaders(),
-    });
-
-    const currentTask = await handleResponse(currentTaskResponse);
-
-    const updateData = {
-      content: updates.content || currentTask.content,
-      ...updates,
-    };
-
-    if (updates.project_id !== undefined) {
-      updateData.project_id = updates.project_id
-        ? updates.project_id.toString()
-        : "";
-    }
-
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(updateData),
-    });
-
-    const responseData = await handleResponse(response);
-
-    return {
-      ...responseData,
-      project_id: updateData.project_id,
-    };
+    const response = await todoAPI.post(`/tasks/${taskId}`, updates);
+    return response.data;
   } catch (error) {
     console.error("Error updating task:", error);
     throw error;
   }
 };
 
-export const deleteTask = async (id) => {
+export const deleteTask = async (taskId) => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    });
-
-    return response.ok;
+    await todoAPI.delete(`/tasks/${taskId}`);
+    return true;
   } catch (error) {
     console.error("Error deleting task:", error);
     return false;
   }
 };
 
-export const completeTask = async (id) => {
+export const completeTask = async (taskId) => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}/close`, {
-      method: "POST",
-      headers: getHeaders(),
-    });
-
-    return response.ok;
+    await todoAPI.post(`/tasks/${taskId}/close`);
+    return true;
   } catch (error) {
     console.error("Error completing task:", error);
     return false;
   }
 };
 
-export const reopenTask = async (id) => {
+export const reopenTask = async (taskId) => {
   try {
-    const response = await fetch(`${API_URL}/tasks/${id}/reopen`, {
-      method: "POST",
-      headers: getHeaders(),
-    });
-
-    return response.ok;
+    await todoAPI.post(`/tasks/${taskId}/reopen`);
+    return true;
   } catch (error) {
     console.error("Error reopening task:", error);
     return false;
   }
 };
 
+export const moveTask = async (taskId, destinationProjectId) => {
+  try {
+    const taskResponse = await todoAPI.get(`/tasks/${taskId}`);
+    const taskDetails = taskResponse.data;
+
+    const newTaskData = {
+      content: taskDetails.content,
+      description: taskDetails.description || "",
+      project_id:
+        destinationProjectId === "inbox" ? null : destinationProjectId,
+      priority: taskDetails.priority,
+      labels: taskDetails.labels || [],
+      due_string: taskDetails.due?.string || null,
+    };
+
+    const newTaskResponse = await todoAPI.post("/tasks", newTaskData);
+
+    await todoAPI.delete(`/tasks/${taskId}`);
+
+    return newTaskResponse.data;
+  } catch (error) {
+    console.error("Error moving task:", error);
+    throw error;
+  }
+};
+
 export const fetchFavoriteProjects = async () => {
   try {
-    const allProjects = await fetchProjects();
+    const response = await todoAPI.get("/projects");
+    const projects = response.data;
 
-    const storedFavorites = JSON.parse(
-      localStorage.getItem("todoistFavorites") || "[]"
-    );
-
-    const localFavorites = allProjects.filter((project) =>
-      storedFavorites.includes(project.id.toString())
-    );
-
-    const nameFavorites = allProjects.filter((project) =>
-      project.name.toLowerCase().includes("favorite")
-    );
-
-    const combinedFavorites = [
-      ...new Map(
-        [...localFavorites, ...nameFavorites].map((project) => [
-          project.id,
-          project,
-        ])
-      ).values(),
-    ];
-
-    const favoriteProjects = combinedFavorites.map((project) => ({
-      ...project,
-      is_favorite: true,
-    }));
-
+    const favoriteProjects = projects.filter((project) => project.is_favorite);
     return favoriteProjects;
   } catch (error) {
     console.error("Error fetching favorite projects:", error);
-    return [];
+    throw error;
   }
 };
 
 export const toggleProjectFavorite = async (project, isFavorite) => {
   try {
-    const storedFavorites = JSON.parse(
-      localStorage.getItem("todoistFavorites") || "[]"
-    );
-
-    if (isFavorite) {
-      const updatedFavorites = storedFavorites.filter(
-        (id) => id !== project.id.toString()
-      );
-      localStorage.setItem(
-        "todoistFavorites",
-        JSON.stringify(updatedFavorites)
-      );
-    } else {
-      if (!storedFavorites.includes(project.id.toString())) {
-        storedFavorites.push(project.id.toString());
-        localStorage.setItem(
-          "todoistFavorites",
-          JSON.stringify(storedFavorites)
-        );
-      }
-    }
-
-    const updatedFavorites = await fetchFavoriteProjects();
-
-    return {
-      ...project,
-      is_favorite: !isFavorite,
-    };
+    const updatedProject = await toggleFavorite(project.id, !isFavorite);
+    return updatedProject;
   } catch (error) {
-    console.error("Error managing favorites:", error);
-    return null;
-  }
-};
-
-export const getFavoriteProjectIds = () => {
-  try {
-    return JSON.parse(localStorage.getItem("todoistFavorites") || "[]");
-  } catch (error) {
-    console.error("Error retrieving favorite project IDs:", error);
-    return [];
-  }
-};
-
-export const resetFavorites = () => {
-  try {
-    localStorage.removeItem("todoistFavorites");
-  } catch (error) {
-    console.error("Error resetting favorites:", error);
-  }
-};
-
-export const moveTask = async (taskId, destinationProjectId) => {
-  try {
-    const taskResponse = await fetch(`${API_URL}/tasks/${taskId}`, {
-      method: "GET",
-      headers: getHeaders(),
-    });
-
-    if (!taskResponse.ok) {
-      throw new Error("Could not get task details");
-    }
-
-    const taskDetails = await taskResponse.json();
-
-    const formattedProjectId =
-      destinationProjectId === "inbox" ? "" : destinationProjectId;
-
-    const newTaskData = {
-      content: taskDetails.content,
-      description: taskDetails.description || "",
-      project_id: formattedProjectId,
-      priority: taskDetails.priority,
-      due_string: taskDetails.due?.string || null,
-      labels: taskDetails.labels || [],
-    };
-
-    const createResponse = await fetch(`${API_URL}/tasks`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(newTaskData),
-    });
-
-    if (!createResponse.ok) {
-      const errorData = await createResponse.json().catch(() => ({}));
-      throw new Error(
-        `Failed to create new task: ${errorData.message || "Unknown error"}`
-      );
-    }
-
-    const newTask = await createResponse.json();
-
-    const deleteResponse = await fetch(`${API_URL}/tasks/${taskId}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    });
-
-    if (!deleteResponse.ok) {
-      console.warn("Original task could not be deleted");
-    } else {
-      console.log("Original task deleted successfully");
-    }
-
-    return newTask;
-  } catch (error) {
-    console.error("Error moving task:", error);
+    console.error("Error toggling project favorite status:", error);
     throw error;
   }
 };

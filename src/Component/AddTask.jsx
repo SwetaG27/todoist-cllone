@@ -105,7 +105,6 @@ const AddTask = ({ visible, onCancel, onTaskAdded }) => {
             style={{ borderColor: "#e8e8e8" }}
             dropdownStyle={{ borderColor: "#e8e8e8" }}
           >
-            <Select.Option value="inbox">Inbox</Select.Option>
             {projects.map((project) => (
               <Select.Option key={project.id} value={project.id}>
                 {project.name}

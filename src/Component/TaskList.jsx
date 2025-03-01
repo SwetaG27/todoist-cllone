@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { List, message, Button, Input } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { message } from "antd";
 import {
   fetchTasks,
   completeTask,
@@ -11,7 +10,8 @@ import {
   moveTask,
 } from "../Utility/api";
 
-import TaskItem from "./TaskItem";
+import TaskHeader from "./TaskHeader";
+import TaskCollection from "./TaskCollection";
 import TaskEditModal from "./TaskEditModal";
 import TaskMoveModal from "./TaskMoveModal";
 
@@ -192,112 +192,26 @@ const TaskList = ({ selectedProject, refreshKey = 0 }) => {
     }
   };
 
-  const renderTaskList = () => {
-    if (loading) {
-      return (
-        <div style={{ textAlign: "center", padding: "40px 0" }}>
-          Loading tasks...
-        </div>
-      );
-    }
-
-    return (
-      <List
-        style={{ borderColor: "#e8e8e8" }}
-        dataSource={tasks.length > 0 ? tasks : []}
-        renderItem={(task) => (
-          <TaskItem
-            task={task}
-            onComplete={handleComplete}
-            onEdit={handleEditStart}
-            onMove={handleMoveStart}
-            onDelete={handleDelete}
-          />
-        )}
-        locale={{ emptyText: "No tasks in this project" }}
-        footer={
-          <div>
-            {!showForm ? (
-              <Button
-                type="text"
-                icon={<PlusOutlined style={{ color: "#db4c3f" }} />}
-                onClick={() => setShowForm(true)}
-                style={{
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "8px 0",
-                  color: "#db4c3f",
-                }}
-              >
-                Add task
-              </Button>
-            ) : (
-              <div style={{ padding: "8px 0" }}>
-                <Input
-                  placeholder="Task name"
-                  value={newTaskContent}
-                  onChange={(e) => setNewTaskContent(e.target.value)}
-                  onPressEnter={handleAddTask}
-                  style={{ marginBottom: "8px", borderColor: "#e8e8e8" }}
-                />
-                <Input.TextArea
-                  placeholder="Description (optional)"
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                  rows={2}
-                  style={{ marginBottom: "8px", borderColor: "#e8e8e8" }}
-                />
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <div></div>
-                  <div>
-                    <Button
-                      onClick={() => {
-                        setShowForm(false);
-                        setNewTaskContent("");
-                        setNewTaskDescription("");
-                      }}
-                      style={{ marginRight: "8px" }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="primary"
-                      onClick={handleAddTask}
-                      loading={addTaskLoading}
-                      style={{
-                        backgroundColor: "#db4c3f",
-                        borderColor: "#db4c3f",
-                      }}
-                    >
-                      Add task
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        }
-      />
-    );
-  };
-
   return (
-    <div style={{ padding: "20px", backgroundColor: "#fff" }}>
-      <div
-        style={{
-          marginBottom: "20px",
-          borderBottom: "1px solid #f0f0f0",
-          paddingBottom: "10px",
-        }}
-      >
-        <h2 style={{ fontSize: "20px", fontWeight: "500", margin: 0 }}>
-          {selectedProject?.name || "Inbox"}
-        </h2>
-      </div>
+    <div style={{ padding: "20px", backgroundColor: "transparent" }}>
+      <TaskHeader projectName={selectedProject?.name} />
 
-      {renderTaskList()}
+      <TaskCollection
+        tasks={tasks}
+        loading={loading}
+        showForm={showForm}
+        onToggleForm={setShowForm}
+        newTaskContent={newTaskContent}
+        newTaskDescription={newTaskDescription}
+        onContentChange={setNewTaskContent}
+        onDescriptionChange={setNewTaskDescription}
+        onAddTask={handleAddTask}
+        addTaskLoading={addTaskLoading}
+        onComplete={handleComplete}
+        onEdit={handleEditStart}
+        onMove={handleMoveStart}
+        onDelete={handleDelete}
+      />
 
       <TaskEditModal
         editingTask={editingTask}

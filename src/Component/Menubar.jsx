@@ -1,13 +1,6 @@
 import { useState, useEffect } from "react";
 import { Layout, Menu, message, Typography, Space, Avatar } from "antd";
 import {
-  InboxOutlined,
-  CalendarOutlined,
-  AppstoreOutlined,
-  PlusOutlined,
-  BorderlessTableOutlined,
-} from "@ant-design/icons";
-import {
   fetchProjects,
   createProject,
   updateProject,
@@ -17,7 +10,9 @@ import {
 } from "../Utility/api";
 import AddTask from "./AddTask";
 import ProjectModals from "./ProjectModals";
-import ActionMenu from "./ActionMenu";
+import MainNavigation from "./MainNavigation";
+import ProjectsSection from "./ProjectSection";
+import FavoritesSection from "./FavouriteSection";
 
 const { Sider } = Layout;
 const { Title } = Typography;
@@ -64,7 +59,9 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
         name: e.key.charAt(0).toUpperCase() + e.key.slice(1),
       });
     } else {
-      const project = projects.find((p) => p.id.toString() === e.key);
+      const project =
+        projects.find((p) => p.id.toString() === e.key) ||
+        favorites.find((p) => p.id.toString() === e.key);
       if (project) {
         onProjectSelect({ id: project.id, name: project.name });
       }
@@ -151,10 +148,12 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
 
   const handleToggleFavorite = async (project) => {
     const isFavorite = favorites.some((p) => p.id === project.id);
+    console.log(`Project ${project.name} is currently favorite: ${isFavorite}`);
 
     setLoading(true);
     try {
       const updatedProject = await toggleProjectFavorite(project, isFavorite);
+      console.log("Updated project:", updatedProject);
 
       if (updatedProject) {
         setProjects((prev) =>
@@ -170,6 +169,7 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
         }
       }
     } catch (error) {
+      console.error("Error handling toggle favorite:", error);
       message.error("Failed to update favorite status");
     } finally {
       setLoading(false);
@@ -183,126 +183,58 @@ const MenuBar = ({ onProjectSelect, onTaskAdded }) => {
     }
   };
 
+  const handleEditProjectStart = (project) => {
+    setCurrentProject({ ...project });
+    setIsEditModalVisible(true);
+  };
+
+  const handleDeleteProjectStart = (project) => {
+    setCurrentProject(project);
+    setIsDeleteModalVisible(true);
+  };
+
   const getMenuItems = () => {
-    const items = [
-      {
-        key: "add-task",
-        icon: <PlusOutlined style={{ color: "#db4c3f" }} />,
-        label: "Add task",
-        onClick: (e) => {
-          e.domEvent.stopPropagation();
-          setIsAddTaskVisible(true);
-        },
-      },
-      {
-        key: "inbox",
-        icon: <InboxOutlined />,
-        label: "Inbox",
-      },
-      {
-        key: "today",
-        icon: <CalendarOutlined />,
-        label: "Today",
-      },
-      {
-        key: "upcoming",
-        icon: <CalendarOutlined />,
-        label: "Upcoming",
-      },
-      {
-        key: "filters",
-        icon: <AppstoreOutlined />,
-        label: "Filters & Labels",
-      },
-    ];
+    const items = [];
 
-    
-      items.push({
-        key: "favorites",
-        label: "Favorites",
-        children: favorites.map((project) => ({
-          key: project.id.toString(),
-          icon: <BorderlessTableOutlined />,
-          label: (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>{project.name}</span>
-              <ActionMenu
-                onEdit={() => {
-                  setCurrentProject({ ...project });
-                  setIsEditModalVisible(true);
-                }}
-                onDelete={() => {
-                  setCurrentProject(project);
-                  setIsDeleteModalVisible(true);
-                }}
-                onFavorite={() => handleToggleFavorite(project)}
-                isFavorite={true}
-              />
-            </div>
-          ),
-        })),
-      });
-  
-
-    items.push({
-      key: "projects",
-      label: "My Projects",
-      children: [
-        ...projects.map((project) => ({
-          key: project.id.toString(),
-          icon: <BorderlessTableOutlined />,
-          label: (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>{project.name}</span>
-              <ActionMenu
-                onEdit={() => {
-                  setCurrentProject({ ...project });
-                  setIsEditModalVisible(true);
-                }}
-                onDelete={() => {
-                  setCurrentProject(project);
-                  setIsDeleteModalVisible(true);
-                }}
-                onFavorite={() => handleToggleFavorite(project)}
-                isFavorite={favorites.some((fav) => fav.id === project.id)}
-              />
-            </div>
-          ),
-        })),
-        {
-          key: "add-project",
-          icon: <PlusOutlined />,
-          label: "Add Project",
-          onClick: (e) => {
-            e.domEvent.stopPropagation();
-            setIsAddModalVisible(true);
-          },
-        },
-      ],
+    const favoritesSection = FavoritesSection({
+      favorites,
+      onEditProject: handleEditProjectStart,
+      onDeleteProject: handleDeleteProjectStart,
+      onToggleFavorite: handleToggleFavorite,
     });
+
+    if (favoritesSection) {
+      items.push(favoritesSection);
+    }
+
+    const projectsSection = ProjectsSection({
+      projects,
+      favorites,
+      onEditProject: handleEditProjectStart,
+      onDeleteProject: handleDeleteProjectStart,
+      onToggleFavorite: handleToggleFavorite,
+      onAddProject: () => setIsAddModalVisible(true),
+    });
+
+    items.push(projectsSection);
 
     return items;
   };
 
   return (
-    <Sider width={250} style={{ background: "#fff" }}>
-      <Title level={5} style={{ paddingLeft: "16px" }}>
+    <Sider width={250} style={{ background: "#fcfaf8" }}>
+      <Title level={5} style={{ paddingLeft: "16px", marginTop: "15px" }}>
         <Space size={15}>
           <Avatar>S</Avatar> Swetag...
         </Space>
       </Title>
+
+      <MainNavigation
+        selectedKey={selectedKey}
+        onMenuClick={handleMenuClick}
+        onAddTaskClick={() => setIsAddTaskVisible(true)}
+      />
+
       <Menu
         mode="inline"
         selectedKeys={[selectedKey]}

@@ -1,0 +1,25 @@
+.ant-menu-item-selected {
+  background-color: #ffefe5 !important;
+  color: #db4c3f !important;
+}
+
+.ant-menu-item-selected .anticon {
+  color: #1f1d1d !important;
+}
+
+.ant-menu-light .ant-menu-submenu-selected > .ant-menu-submenu-title {
+  color: #1f1d1d !important;
+}
+
+.ant-btn-primary {
+  background-color: #db4c3f !important;
+  border-color: #db4c3f !important;
+}
+
+.ant-layout-sider {
+  border-right: 1px solid #f0f0f0;
+}
+
+.ant-menu-inline {
+  border-right: none !important;
+}

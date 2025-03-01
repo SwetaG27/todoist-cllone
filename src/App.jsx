@@ -17,20 +17,17 @@ function App() {
     setTaskRefreshCounter((prev) => prev + 1);
   }, []);
 
-  const handleTaskAdded = useCallback(
-    (newTask) => {
-      refreshTasks();
-    },
-    [refreshTasks]
-  );
+  const handleTaskAdded = useCallback(() => {
+    refreshTasks();
+  }, [refreshTasks]);
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout style={{ minHeight: "100vh" ,background:"transparent"}}>
       <Menubar
         onProjectSelect={setSelectedProject}
         onTaskAdded={handleTaskAdded}
       />
-      <Content style={{ padding: "0 24px", minHeight: 280 }}>
+      <Content style={{ padding: "0 24px",marginTop:"40px", minHeight: 280 }}>
         <TaskList
           selectedProject={selectedProject}
           refreshKey={taskRefreshCounter}

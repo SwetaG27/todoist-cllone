@@ -8,7 +8,7 @@ const todoAPI = axios.create({
   },
 });
 
-export const getProjects = async () => {
+export const fetchProjects = async () => {
   try {
     const response = await todoAPI.get("/projects");
     return response.data;
@@ -18,11 +18,10 @@ export const getProjects = async () => {
   }
 };
 
-export const fetchProjects = getProjects;
 
-export const createProject = async (name, color = "berry_red") => {
+export const createProject = async (name) => {
   try {
-    const response = await todoAPI.post("/projects", { name, color });
+    const response = await todoAPI.post("/projects", { name});
     return response.data;
   } catch (error) {
     console.error("Error creating project:", error);
@@ -53,8 +52,10 @@ export const deleteProject = async (id) => {
 export const toggleFavorite = async (projectId, isFavorite) => {
   try {
     const response = await todoAPI.post(`/projects/${projectId}`, {
-      is_favorite: isFavorite,
+      is_favorite: isFavorite ? "1" : "0"
     });
+
+  
     return response.data;
   } catch (error) {
     console.error("Error toggling favorite status:", error);
